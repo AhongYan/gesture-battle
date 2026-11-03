@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Gesture Battle Camera AR</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#080f25;color:#fff;font-family:system-ui,Arial}
+#camera{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;transform:scaleX(-1);filter:brightness(.48) saturate(.85)}
+#shade{position:fixed;inset:0;background:linear-gradient(135deg,#07152c99,#130d35aa);pointer-events:none}
+#hud{position:fixed;inset:0;padding:clamp(10px,2vw,24px);display:flex;flex-direction:column;justify-content:space-between;pointer-events:none}
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.pill{background:#111d39dd;border:1px solid #ffffff35;border-radius:16px;padding:9px 13px;box-shadow:0 5px 20px #0005;font-weight:800}
+h1{font-size:clamp(22px,4vw,44px);margin:0;color:#ffe36e;text-shadow:0 3px 0 #8a4b00,0 0 20px #ffb700}
+#questionBox{align-self:center;text-align:center;width:min(760px,96%);background:#101d3be8;border:2px solid #ffffff55;border-radius:24px;padding:14px 18px;box-shadow:0 12px 35px #0008;pointer-events:auto}
+#subject{font-size:clamp(12px,2vw,18px);color:#77e7ff;font-weight:900;letter-spacing:2px}
+#question{font-size:clamp(19px,3vw,32px);font-weight:900;margin:6px 0 0}
+#answers{display:flex;justify-content:center;align-items:center;gap:clamp(8px,2vw,20px);flex-wrap:wrap;margin:0 auto 4vh;max-width:1100px;pointer-events:auto}
+.answer{min-width:min(190px,42vw);max-width:260px;min-height:76px;border:3px solid #fff;border-radius:22px;padding:12px;background:linear-gradient(145deg,#5b42d8,#252b78);color:white;font-size:clamp(16px,2.3vw,23px);font-weight:900;box-shadow:0 8px 0 #17194d,0 12px 25px #0008;transition:.12s;cursor:pointer}
+.answer.active{transform:translateY(-8px) scale(1.06);background:linear-gradient(145deg,#ffcf45,#ff7b28);color:#291400;border-color:#fff4b0;box-shadow:0 8px 0 #a83e0b,0 0 30px #ffd44d}
+#pointer{position:fixed;width:42px;height:42px;border:4px solid #ff4545;border-radius:50%;background:#ff242455;box-shadow:0 0 0 8px #ff303033,0 0 24px #ff3535;transform:translate(-50%,-50%);z-index:9;display:none;pointer-events:none}
+#pointer:after{content:"";position:absolute;width:9px;height:9px;background:#fff;border-radius:50%;left:50%;top:50%;transform:translate(-50%,-50%)}
+#bottom{display:flex;justify-content:space-between;align-items:end;gap:10px;pointer-events:none}
+#status{background:#111d39e8;padding:10px 14px;border-radius:15px;border:1px solid #ffffff35;font-size:clamp(12px,1.8vw,17px);font-weight:800;max-width:65%}
+#faceTag{position:fixed;right:14px;bottom:100px;background:#0a1838cc;border:1px solid #ffffff55;padding:7px 11px;border-radius:12px;font-size:12px}
+#panel{position:fixed;inset:0;background:#070d20eF;display:flex;align-items:center;justify-content:center;padding:20px;z-index:20}
+#dialog{width:min(620px,100%);background:linear-gradient(145deg,#182b53,#24164b);border:2px solid #ffffff55;border-radius:28px;padding:clamp(20px,4vw,38px);text-align:center;box-shadow:0 20px 80px #000a}
+#dialog h2{font-size:clamp(28px,5vw,48px);margin:0 0 10px;color:#ffe36e}
+#dialog p{line-height:1.55;color:#e5edff}
+button.action{border:0;border-radius:16px;background:linear-gradient(90deg,#16c784,#00a8a8);color:#041d20;padding:15px 24px;font-size:18px;font-weight:1000;cursor:pointer;margin:7px}
+button.secondary{background:#33466d;color:white}
+#progress{height:8px;background:#ffffff25;border-radius:20px;overflow:hidden;margin-top:10px}#bar{height:100%;width:0;background:#ffe36e}
+@media(max-width:600px){#answers{gap:8px;margin-bottom:8vh}.answer{min-width:42%;min-height:66px;padding:9px;font-size:16px}#questionBox{padding:12px}#faceTag{bottom:95px}}
+</style>
+</head>
+<body>
+<video id="camera" autoplay playsinline muted></video><div id="shade"></div>
+<div id="hud">
+ <div class="top"><div><h1>⚔️ GESTURE BATTLE</h1><div class="pill" id="round">RONDE 0 / 10</div></div><div class="pill" id="stats">❤️❤️❤️ &nbsp; ⭐ 0</div></div>
+ <div id="questionBox"><div id="subject">SIAPKAN DIRIMU</div><div id="question">Arahkan tongkat ke jawaban yang benar!</div><div id="progress"><div id="bar"></div></div></div>
+ <div id="answers"></div>
+ <div id="bottom"><div id="status">🔴 Tunjukkan ujung tongkat MERAH ke kamera.</div><div class="pill">🐲 MONSTER <span id="monster">10</span> HP</div></div>
+</div>
+<div id="faceTag">📷 Kamera depan aktif saat dimulai</div><div id="pointer"></div>
+<div id="panel"><div id="dialog">
+<h2>⚔️ GESTURE BATTLE</h2>
+<p><b>Mode Kamera AR</b><br>Wajah siswa tampil di layar kamera. Pegang benda kecil dengan <b>ujung MERAH terang</b> (misalnya tutup spidol merah) lalu arahkan ujungnya ke pilihan jawaban yang melayang.</p>
+<p>📌 Pastikan ruangan cukup terang. Izinkan akses kamera. Tahan penunjuk di atas jawaban sekitar 1 detik untuk memilih.</p>
+<button class="action" id="start">📷 AKTIFKAN KAMERA & MULAI</button>
+<p style="font-size:12px;color:#b9c7e8">Kamera diproses langsung di perangkat; video tidak dikirim atau disimpan oleh game ini. Perlu dibuka melalui HTTPS atau localhost agar kamera diizinkan.</p>
+<div id="error" style="color:#ffaaaa;font-weight:700"></div>
+</div></div>
+<script>
+const questions=[
+["IPAS","Apa sumber energi utama bagi kehidupan di Bumi?",["Bulan","Matahari","Angin","Bintang"],1,"Matahari memberikan cahaya dan panas yang mendukung kehidupan."],
+["MATEMATIKA","Hasil dari 2,5 × 4 adalah ...",["8","9","10","12"],2,"2,5 × 4 = 10."],
+["BAHASA INDONESIA","Kalimat yang berisi pendapat disebut ...",["Fakta","Opini","Perintah","Pertanyaan"],1,"Opini merupakan pendapat atau pandangan seseorang."],
+["PANCASILA","Lambang sila ketiga Pancasila adalah ...",["Bintang","Rantai","Pohon beringin","Kepala banteng"],2,"Pohon beringin melambangkan persatuan Indonesia."],
+["IPAS","Benda yang dapat ditarik magnet adalah ...",["Kayu","Kertas","Paku besi","Plastik"],2,"Paku besi dapat ditarik magnet."],
+["MATEMATIKA","Besar sudut siku-siku adalah ...",["45°","90°","120°","180°"],1,"Sudut siku-siku besarnya 90 derajat."],
+["IPAS","Organ tubuh yang memompa darah adalah ...",["Paru-paru","Lambung","Jantung","Ginjal"],2,"Jantung memompa darah ke seluruh tubuh."],
+["BAHASA INDONESIA","Gagasan utama dalam paragraf disebut ...",["Ide pokok","Kata tanya","Kalimat penutup","Judul buku"],0,"Ide pokok merupakan inti pembahasan paragraf."],
+["PANCASILA","Musyawarah untuk mencapai mufakat sesuai sila ke ...",["Satu","Dua","Tiga","Empat"],3,"Sila keempat mengajarkan musyawarah."],
+["MATEMATIKA","Hasil dari 3,75 + 2,25 adalah ...",["5","5,5","6","6,5"],2,"Hasilnya adalah 6."]
+];
+const video=document.querySelector("#camera"), pointer=document.querySelector("#pointer"), answers=document.querySelector("#answers");
+const statusEl=document.querySelector("#status"), panel=document.querySelector("#panel");
+let idx=0,hp=3,monster=10,score=0,answered=false,stream=null,detectorCanvas=document.createElement("canvas"),ctx=detectorCanvas.getContext("2d",{willReadFrequently:true}),holdStart=0,lastChoice=-1,raf=0;
+function render(){
+ const q=questions[idx];document.querySelector("#round").textContent=`RONDE ${idx+1} / ${questions.length}`;
+ document.querySelector("#stats").textContent=`${"❤️".repeat(hp)}${"🖤".repeat(3-hp)}  ⭐ ${score}`;
+ document.querySelector("#monster").textContent=monster;document.querySelector("#subject").textContent=q[0];document.querySelector("#question").textContent=q[1];
+ document.querySelector("#bar").style.width=`${idx/questions.length*100}%`;
+ answers.innerHTML="";
+ q[2].forEach((a,i)=>{const b=document.createElement("button");b.className="answer";b.textContent=["🛡️ ","⚡ ","🔥 ","💎 "][i]+a;b.dataset.index=i;b.onclick=()=>choose(i);answers.appendChild(b)});
+ answered=false;lastChoice=-1;holdStart=0;
+}
+function choose(i){
+ if(answered)return;answered=true;const q=questions[idx],correct=i===q[3];
+ [...answers.children].forEach((b,n)=>{b.classList.remove("active");if(n===q[3])b.style.background="linear-gradient(145deg,#16c784,#087c63)";if(n===i&&!correct)b.style.background="linear-gradient(145deg,#ef4444,#991b1b)"});
+ if(correct){score+=100;monster=Math.max(0,monster-1);statusEl.textContent="⚡ SERANGAN BERHASIL! "+q[4]}
+ else{hp=Math.max(0,hp-1);statusEl.textContent="💥 BELUM TEPAT. "+q[4]}
+ document.querySelector("#stats").textContent=`${"❤️".repeat(hp)}${"🖤".repeat(3-hp)}  ⭐ ${score}`;document.querySelector("#monster").textContent=monster;
+ setTimeout(()=>{if(hp===0||monster===0||idx===questions.length-1){finish()}else{idx++;render();statusEl.textContent="🔴 Arahkan ujung tongkat merah ke jawaban yang benar."}},2300);
+}
+function finish(){cancelAnimationFrame(raf);document.querySelector("#subject").textContent=monster===0?"🏆 VICTORY!":"PERTARUNGAN SELESAI";document.querySelector("#question").textContent=`Skor ${score} poin • ${score/100} jawaban benar`;answers.innerHTML="";statusEl.textContent=hp===0?"Energi habis. Coba lagi!":"Hebat! Terus tingkatkan ilmumu.";document.querySelector("#bar").style.width="100%";const b=document.createElement("button");b.className="answer";b.textContent="🔄 MAIN LAGI";b.onclick=()=>{idx=0;hp=3;monster=10;score=0;render();statusEl.textContent="🔴 Arahkan tongkat merah ke jawaban."};answers.appendChild(b)}
+function detectRed(){
+ if(video.readyState>=2){
+  const w=240,h=180;detectorCanvas.width=w;detectorCanvas.height=h;ctx.save();ctx.translate(w,0);ctx.scale(-1,1);ctx.drawImage(video,0,0,w,h);ctx.restore();
+  const d=ctx.getImageData(0,0,w,h).data;let sx=0,sy=0,count=0;
+  for(let y=0;y<h;y+=2)for(let x=0;x<w;x+=2){let p=(y*w+x)*4,r=d[p],g=d[p+1],b=d[p+2];if(r>145&&r>g*1.65&&r>b*1.45&&g<115&&b<125){sx+=x;sy+=y;count++}}
+  if(count>7){const x=sx/count/w*innerWidth,y=sy/count/h*innerHeight;pointer.style.display="block";pointer.style.left=x+"px";pointer.style.top=y+"px";
+   const el=document.elementFromPoint(x,y)?.closest(".answer");if(el&&!answered){const n=+el.dataset.index;if(n!==lastChoice){lastChoice=n;holdStart=performance.now()}else if(performance.now()-holdStart>900){choose(n)}}else{lastChoice=-1;holdStart=0}
+   statusEl.textContent=el&&!answered?`🎯 TARGET: ${el.textContent} — tahan untuk menembak!`:"🔴 Tongkat terdeteksi: arahkan ke jawaban.";
+  }else{pointer.style.display="none";lastChoice=-1;holdStart=0}
+ }
+ raf=requestAnimationFrame(detectRed);
+}
+document.querySelector("#start").onclick=async()=>{
+ try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user",width:{ideal:640},height:{ideal:480}},audio:false});video.srcObject=stream;await video.play();panel.style.display="none";render();detectRed()}
+ catch(e){document.querySelector("#error").textContent="Kamera belum bisa dibuka. Izinkan akses kamera dan buka halaman melalui HTTPS di Chrome. ("+e.message+")"}
+};
+</script>
+</body></html>
